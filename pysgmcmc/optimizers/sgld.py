@@ -67,6 +67,13 @@ class SGLD(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
+            if 'OLs' not in group:
+                group['OLs'] = list()
+                group['ORs'] = list()
+
+            v_squared = 0.0
+            OL = 0.0
+            
             for parameter in group["params"]:
 
                 if parameter.grad is None:
@@ -78,6 +85,9 @@ class SGLD(Optimizer):
                 precondition_decay_rate = group["precondition_decay_rate"]
                 gradient = parameter.grad.data
 
+                theta = parameter.data
+                F = -parameter.grad.data
+
                 #  State initialization {{{ #
 
                 if len(state) == 0:
@@ -85,6 +95,10 @@ class SGLD(Optimizer):
                     state["momentum"] = torch.ones_like(parameter)
 
                 #  }}} State initialization #
+
+                # Compute Observables
+                v_squared = torch.norm(F) ** 2
+                OL += -torch.dot(F.view(-1), theta.view(-1))
 
                 state["iteration"] += 1
 
@@ -114,5 +128,10 @@ class SGLD(Optimizer):
                 )
 
                 parameter.data.add_(-lr * scaled_grad)
+            
+            OR = 0.5 * lr * v_squared
+
+            group['OLs'].append(OL)
+            group['ORs'].append(OR)
 
         return loss
