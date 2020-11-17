@@ -16,6 +16,7 @@ class SGLD(Optimizer):
                  precondition_decay_rate=0.95,
                  num_pseudo_batches=1,
                  num_burn_in_steps=3000,
+                 temperature=1.0,
                  diagonal_bias=1e-8) -> None:
         """ Set up a SGLD Optimizer.
 
@@ -57,6 +58,7 @@ class SGLD(Optimizer):
             num_pseudo_batches=num_pseudo_batches,
             num_burn_in_steps=num_burn_in_steps,
             diagonal_bias=1e-8,
+            temperature=temperature
         )
         super().__init__(params, defaults)
 
@@ -84,6 +86,8 @@ class SGLD(Optimizer):
                 num_pseudo_batches = group["num_pseudo_batches"]
                 precondition_decay_rate = group["precondition_decay_rate"]
                 gradient = parameter.grad.data
+
+                temperature = group['temperature']
 
                 theta = parameter.data
                 F = -parameter.grad.data
@@ -124,7 +128,7 @@ class SGLD(Optimizer):
                     torch.normal(
                         mean=torch.zeros_like(gradient),
                         std=torch.ones_like(gradient)
-                    ) * sigma * torch.sqrt(preconditioner)
+                    ) * sigma * temperature * torch.sqrt(preconditioner)
                 )
 
                 parameter.data.add_(-lr * scaled_grad)
